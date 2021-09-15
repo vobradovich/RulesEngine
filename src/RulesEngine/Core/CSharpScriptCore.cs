@@ -27,42 +27,36 @@ namespace RulesEngine.Core
         {
             var result = policyVersion.PolicyRules
                 .OrderBy(r => r.Order)
-                .Where(r => Eval<bool>(r.Condition, parameter).Result)
-                .Select(r => Eval<TResult>(r.Value, parameter).Result)
+                .Where(r => EvalAsync<bool>(r.Condition, parameter).Result)
+                .Select(r => EvalAsync<TResult>(r.Value, parameter).Result)
                 .FirstOrDefault();
             return result;
         }
 
-        private Task<T2> Eval<T2>(string expression, T parameter)
+        private async Task<TResult> EvalAsync<TResult>(string expression, T parameter)
         {
-            var runner = ScriptRunnerCache<T, T2>.GetRunner(expression);
-            return runner(parameter);
+            var runner = ScriptRunnerCache<T, TResult>.GetRunner(expression);
+            return await runner(parameter);
         }
     }
 
-    public static class ScriptRunnerCache<T, T2>
+    public static class ScriptRunnerCache<TParameter, TResult>
     {
-        static Dictionary<string, ScriptRunner<T2>> _cache = new Dictionary<string, ScriptRunner<T2>>();
+        private static ConcurrentDictionary<string, ScriptRunner<TResult>> _cache = new ConcurrentDictionary<string, ScriptRunner<TResult>>();
 
-        public static ScriptRunner<T2> GetRunner(string expression)
+        public static ScriptRunner<TResult> GetRunner(string expression)
         {
-            ScriptRunner<T2> runner;
-            if (!_cache.TryGetValue(expression, out runner))
-            {
-                runner = CreateScript(expression).CreateDelegate();
-                _cache.Add(expression, runner);                
-            }
-            return runner;
+            return _cache.GetOrAdd(expression, (e) => CreateScript(e).CreateDelegate());
         }
 
-        public static Script<T2> CreateScript(string expression)
+        public static Script<TResult> CreateScript(string expression)
         {
-            var script = CSharpScript.Create<T2>(expression,
-                 options: ScriptOptions.Default.WithReferences(
-                     MetadataReference.CreateFromFile(typeof(T).GetTypeInfo().Assembly.Location),
-                     MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location)
-                 ),
-                globalsType: typeof(T));
+            var script = CSharpScript.Create<TResult>(expression,
+                options: ScriptOptions.Default.WithReferences(
+                    MetadataReference.CreateFromFile(typeof(TParameter).GetTypeInfo().Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location)
+                ),
+                globalsType: typeof(TParameter));
             return script;
         }
     }

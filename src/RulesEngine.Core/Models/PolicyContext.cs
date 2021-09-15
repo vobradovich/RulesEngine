@@ -15,7 +15,7 @@ namespace RulesEngine.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseInMemoryDatabase();
+            optionsBuilder.UseInMemoryDatabase("RulesEngine");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

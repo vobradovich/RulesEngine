@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SpaServices.Webpack;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RulesEngine.Models;
 
 namespace RulesEngine
 {
@@ -32,6 +33,8 @@ namespace RulesEngine
             services.AddMvc();
             // Inject an implementation of ISwaggerProvider with defaulted settings applied
             services.AddSwaggerGen();
+            // Add EF services to the service container
+            services.AddDbContext<PolicyContext>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,6 +42,8 @@ namespace RulesEngine
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
+
+            SampleData.InitializeDatabaseAsync(app.ApplicationServices).Wait();
 
             // Enable middleware to serve generated Swagger as a JSON endpoint
             app.UseSwagger();
